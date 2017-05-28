@@ -5,9 +5,10 @@
     <title>Happiness Generator</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js" integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn" crossorigin="anonymous"></script>
+    <link rel=stylesheet href="style.css">
     <style>
         /* Remove the navbar's default margin-bottom and rounded borders */
         
@@ -30,78 +31,82 @@
 </head>
 
 <body>
-
-    <nav class="navbar navbar-inverse">
-        <div class="container-fluid">
-            <div class="navbar-header">
-                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>                        
-      </button>
-                <a class="navbar-brand" href="#">HappyGen</a>
-            </div>
-            <div class="collapse navbar-collapse" id="myNavbar">
-                <ul class="nav navbar-nav">
-                    <li class="active"><a href="#">Home</a></li>
-                </ul>
-            </div>
-        </div>
+    <nav class="navbar navbar-light bg-faded">
+        <a class="navbar-brand" href="#">HappyGen</a>
     </nav>
 
     <div class="jumbotron">
-        <div class="container text-center">
+        <div class="container text-center" id="jumbo-text">
             <h1>Happiness Generator</h1>
             <p>Solving Internet Harrassment One Word At A Time</p>
         </div>
     </div>
 
     <div class="container-fluid bg-3 text-center">
-        <h3>Eyes Scarred Never Again!</h3><br>
-        <div class="row">
-            <div class="col-sm-3">
-                <p> Stopping people all over the internet from harrassment one message at a time </p>
-                <img src='img/picture.png' style="width:100%" alt="Image">
+        <div class="container"><img src='img/demo.png' style="width:100%" alt="Image"></div>
+        <br><br>
+        <h3 id="title">HappyGen for the Next Gen</h3><br>
+        <div class="row card-deck">
+            <div class="col-sm-3 card">
+                <img src='img/picture.png' style="width:100%" alt="Image" class="card-img-top">
+                <div class="card-block">
+                    <p class="card-text"> Stopping people all over the internet from harrassing; one message at a time. </p>
+                </div>
             </div>
-            <div class="col-sm-3">
-                <p> Project Sunshine protects people from the harsh reality that is the internet. </p>
-                <img src="img/dope%20lit%20pic.jpg" class="img-responsive" style="width:100%" alt="Image">
+            <div class="col-sm-3 card">
+                <img src='img/dope%20lit%20pic.jpg' style="width:100%" alt="Image" class="card-img-top">
+                <div class="card-block">
+                    <p class="card-text"> Project Sunshine protects people from the harsh reality that is the internet. </p>
+                </div>
             </div>
-            <div class="col-sm-3">
-                <p>Our extension helps protects people from possible mean messages and comments on the internet. </p>
-                <img src="img/gif.gif" class="img-responsive" style="width:100%" alt="Image">
+            <div class="col-sm-3 card">
+                <img src='img/gif.gif' style="width:100%" alt="Image" class="card-img-top">
+                <div class="card-block">
+                    <p class="card-text"> Our extension helps protects people from possible mean messages and comments on the internet. </p>
+                </div>
             </div>
-            <div class="col-sm-3">
-                <p> To download our google chrome extension please click on the link below and follow the instructions to install</p>
-                <a href=d ope.zip download="extension">Download</a>
-                <img src="img/lit.png" class="img-responsive" style="width:100%" alt="Image">
+            <div class="col-sm-3 card">
+                <img src='img/lit.png' style="width:100%" alt="Image" class="card-img-top">
+                <div class="card-block">
+                    <p class="card-text"> To download our google chrome extension, please click on the link below and follow the instructions to install. </p>
+                    <a href=dope.zip download="extension">Download</a>&nbsp;/
+                    <a href=https://github.com/mkkaufmann/HappinessGenerator>Github</a>
+                </div>
             </div>
         </div>
     </div><br>
 
     <div class="container-fluid bg-3 text-center">
-        <div class="row">
-            <div class="col-sm-3">
-                <p>Unzip the file (WINDOWS:Right-click->Extract All, MAC:Double-click)</p>
-                <img src="img/step1.png" class="img-responsive" style="width:100%" alt="Image">
+        <div class="row card-deck">
+            <div class="col-sm-3 card">
+                <img src='img/step1.png' style="width:100%" alt="Image" class="card-img-top">
+                <div class="card-block">
+                    <p class="card-text"> Unzip the file (WINDOWS:Right-click->Extract All, MAC:Double-click). </p>
+                </div>
             </div>
-            <div class="col-sm-3">
-                <p>Go to chrome extensions</p>
-                <img src="img/step2.png" class="img-responsive" style="width:100%" alt="Image">
+            <div class="col-sm-3 card">
+                <img src='img/step2.png' style="width:100%" alt="Image" class="card-img-top">
+                <div class="card-block">
+                    <p class="card-text"> Go to chrome extensions. </p>
+                </div>
             </div>
-            <div class="col-sm-3">
-                <p>Set up the file as an extension (Load unpackaged extension->select unzipped files)</p>
-                <img src="img/step3.png" class="img-responsive" style="width:100%" alt="Image">
+            <div class="col-sm-3 card">
+                <img src='img/step3.png' style="width:100%" alt="Image" class="card-img-top">
+                <div class="card-block">
+                    <p class="card-text"> Set up the file as an extension (Load unpackaged extension->select unzipped files). </p>
+                </div>
             </div>
-            <div class="col-sm-3">
-                <p>Enjoy!</p>
-                <img src="img/picture.png" class="img-responsive" style="width:100%" alt="Image">
+            <div class="col-sm-3 card">
+                <img src='img/picture.png' style="width:100%" alt="Image" class="card-img-top">
+                <div class="card-block">
+                    <p class="card-text"> Enjoy! </p>
+                </div>
             </div>
         </div>
     </div><br><br>
 
     <footer class="container-fluid text-center">
-        <p>Copyright &copy; 2017, Group of Fabulous Flamingoers. All Rights Reserved.</p>
+        <p>Copyright &copy; 2017, Group of Nerds. All Rights Reserved.</p>
     </footer>
 
 </body>
