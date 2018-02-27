@@ -14,3 +14,12 @@ nav {
 .navbar {
     margin-bottom: 0px;
 }
+
+#jumbotron-message {
+    color: white;
+}
+
+#arrow {
+    position: relative;
+    top: 88%;
+}
