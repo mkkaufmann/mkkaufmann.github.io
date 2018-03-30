@@ -1,0 +1,8 @@
+CACHE MANIFEST
+# rev 3
+CACHE:
+index.html
+cache/bootstrap.min.css
+cache/jquery.min.js
+cache/bootstrap.min.js
+cache/js.cookie.min.js
