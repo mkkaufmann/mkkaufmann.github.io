@@ -1,4 +1,18 @@
 window.CARDS_DATA = {
-  "updatedAt": "2026-01-04T20:01:31.004Z",
-  "cards": []
+  "updatedAt": "2026-01-04T20:18:49.992Z",
+  "cards": [
+    {
+      "title": "Intro",
+      "date": "2026-01-04",
+      "time": "",
+      "datetime": "2026-01-04T15:18:00-05:00",
+      "pinned": true,
+      "pinnedOrder": null,
+      "slug": "2026-01-04-intro",
+      "status": "pending_ocr",
+      "image": "content/cards/2026-01-04-intro/image.png",
+      "ocr": "Michael! Lin « Sobtimce eashntes\noe enjoys lens Pretly te.\n\niL hed from the Univety of\nMichisan, whee L shdled CS 8 matt,,\n\nT hope yor Cniey my webdide! :",
+      "responses": []
+    }
+  ]
 };
