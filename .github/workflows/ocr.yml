@@ -1,0 +1,37 @@
+name: OCR Cards
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "content/cards/**"
+      - "scripts/**"
+      - ".github/workflows/ocr.yml"
+  workflow_dispatch:
+
+jobs:
+  ocr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Tesseract
+        run: sudo apt-get update && sudo apt-get install -y tesseract-ocr
+      - name: Run OCR
+        run: scripts/ocr-new.sh
+      - name: Build cards data
+        run: node scripts/build-data.js
+      - name: Commit changes
+        run: |
+          if [[ -n "$(git status --porcelain)" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add content/cards data/cards.json data/cards.js
+            git commit -m "Update OCR output"
+            git push
+          else
+            echo "No changes to commit."
+          fi

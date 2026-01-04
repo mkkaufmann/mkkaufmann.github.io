@@ -1,0 +1,25 @@
+name: Response Card
+description: Submit a response index card image.
+title: "Response card: "
+labels: ["response-card"]
+body:
+  - type: input
+    id: post_slug
+    attributes:
+      label: Post slug
+      description: The card slug you are responding to.
+      placeholder: 2024-01-01-sample
+    validations:
+      required: true
+  - type: textarea
+    id: message
+    attributes:
+      label: Notes
+      description: Optional notes about your response.
+  - type: textarea
+    id: upload
+    attributes:
+      label: Image upload
+      description: Drag and drop your response card image here.
+    validations:
+      required: true

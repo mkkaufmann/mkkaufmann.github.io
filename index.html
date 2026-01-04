@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Index Card Blog</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f5f2;
+      --ink: #1d1d1f;
+      --muted: #5d5d5f;
+      --card: #ffffff;
+      --border: #dedad2;
+      --accent: #2f5d62;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Times New Roman", Georgia, serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+    main {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 0 20px 60px;
+    }
+    .pinned-group {
+      margin-top: 24px;
+      margin-bottom: 32px;
+    }
+    .pinned-group h2 {
+      margin: 10px 0 12px;
+      font-size: 22px;
+      color: var(--ink);
+      font-weight: 700;
+      text-align: center;
+    }
+    .date-group {
+      margin-bottom: 28px;
+    }
+    .date-group h2 {
+      margin: 10px 0 12px;
+      font-size: 24px;
+      color: var(--muted);
+      font-weight: 600;
+      text-align: center;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+    article {
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+      text-align: center;
+      position: relative;
+    }
+    .post-stack {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      outline: none;
+    }
+    .post-stack[data-has-responses="true"] {
+      cursor: pointer;
+    }
+    .post-stack[data-has-responses="true"]:hover .post-card,
+    .post-stack[data-has-responses="true"]:hover .responses .card-shell img,
+    .post-stack[data-has-responses="true"]:hover .responses .card-shell .ocr-card {
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.16);
+    }
+    .post-stack[data-has-responses="true"].collapsed:hover .responses .card-shell {
+      transform: translateX(12px);
+    }
+    .card-shell {
+      position: relative;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .post-card {
+      z-index: 2;
+    }
+    .card-shell.pinned::before,
+    .card-shell.pinned::after {
+      content: "";
+      position: absolute;
+      top: -12px;
+      width: 28px;
+      height: 28px;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 28'><circle cx='14' cy='14' r='7' fill='%23d52630'/><path d='M14 21L14 27' stroke='%237a1311' stroke-width='2' stroke-linecap='round'/></svg>");
+      background-size: contain;
+      background-repeat: no-repeat;
+    }
+    .card-shell.pinned::before {
+      left: -12px;
+      transform: rotate(-12deg);
+    }
+    .card-shell.pinned::after {
+      right: -12px;
+      transform: rotate(12deg);
+    }
+    article img {
+      width: 100%;
+      border-radius: 6px;
+      max-width: 5in;
+      max-height: 3in;
+      height: auto;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+    }
+    .time {
+      font-size: 13px;
+      color: var(--muted);
+      letter-spacing: 0.02em;
+      order: 3;
+      margin-top: 6px;
+    }
+    article h2 {
+      margin: 0;
+      font-size: 18px;
+    }
+    .ocr {
+      display: none;
+      font-size: 14px;
+      color: var(--ink);
+      margin: 0;
+      white-space: pre-line;
+    }
+    .ocr-card {
+      display: none;
+      width: 5in;
+      height: 3in;
+      max-width: 100%;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      padding: 12px;
+      background: #fff;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+      align-items: flex-start;
+      justify-content: flex-start;
+    }
+    .ocr-card .ocr {
+      display: block;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+    .show-ocr article img {
+      display: none;
+    }
+    .show-ocr .ocr-card {
+      display: flex;
+    }
+    .reply-btn {
+      position: absolute;
+      right: -48px;
+      top: 50%;
+      transform: translateY(-50%);
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 999px;
+      width: 36px;
+      height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+      text-decoration: none;
+      transition: background 120ms ease, color 120ms ease;
+    }
+    .reply-btn:hover {
+      background: var(--accent);
+      color: #fff;
+    }
+    .reply-btn svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .responses {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+      margin-top: 6px;
+      position: relative;
+      cursor: pointer;
+      z-index: 1;
+      order: 2;
+    }
+    .post-stack.collapsed .responses {
+      margin-top: -2.75in;
+    }
+    .post-stack.collapsed .responses .card-shell {
+      margin-left: 0.12in;
+    }
+    .responses .card-shell {
+      width: 5in;
+      max-width: 100%;
+      flex-direction: column;
+      align-items: center;
+      transition: transform 180ms ease;
+    }
+    .post-stack:not(.collapsed) .responses .card-shell {
+      margin-left: 0.75in;
+    }
+    .post-stack:not(.collapsed) .time {
+      order: 2;
+    }
+    .post-stack:not(.collapsed) .responses {
+      order: 3;
+    }
+    .post-stack.collapsed .responses .card-shell:nth-child(2) {
+      display: none;
+    }
+    .post-stack.collapsed .responses .card-shell:nth-child(3) {
+      display: none;
+    }
+    .post-stack.collapsed .responses .card-shell:nth-child(n+4) {
+      display: none;
+    }
+    .responses .card-shell img,
+    .responses .ocr-card {
+      max-width: 5in;
+      max-height: 3in;
+    }
+    .response-meta {
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 6px;
+      max-height: 40px;
+      opacity: 1;
+      overflow: hidden;
+      transition: opacity 140ms ease, max-height 140ms ease;
+    }
+    .post-stack.collapsed .response-meta {
+      margin-top: 0;
+      max-height: 0;
+      opacity: 0;
+      padding: 0;
+    }
+    @media (max-width: 640px) {
+      .card-shell {
+        flex-direction: column;
+        gap: 8px;
+      }
+      .reply-btn {
+        position: static;
+        transform: none;
+        margin-top: 8px;
+      }
+    }
+    .empty {
+      padding: 30px;
+      text-align: center;
+      color: var(--muted);
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+    }
+    .toggle-ocr {
+      position: sticky;
+      bottom: 18px;
+      margin-top: 10px;
+      display: flex;
+      justify-content: flex-end;
+      pointer-events: none;
+    }
+    .toggle-ocr button {
+      pointer-events: auto;
+      border: none;
+      border-radius: 999px;
+      padding: 10px 16px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+      cursor: pointer;
+    }
+    .pagination {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 18px 0 10px;
+    }
+    .pagination button {
+      border: 1px solid var(--border);
+      background: #fff;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .pagination button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .pagination .page-indicator {
+      display: inline-flex;
+      align-items: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    footer {
+      text-align: center;
+      padding: 20px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    @media print {
+      body { background: #fff; }
+      footer { display: none; }
+      main { max-width: none; padding: 0; }
+      article { border: none; padding: 0; }
+      article img { max-width: 5in; max-height: 3in; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section id="cards" aria-live="polite"></section>
+    <div id="emptyState" class="empty" hidden>No cards yet. Upload the first one.</div>
+    <div id="pagination" class="pagination" hidden>
+      <button id="prevPage" type="button" hidden>Previous</button>
+      <span id="pageIndicator" class="page-indicator"></span>
+      <button id="nextPage" type="button" hidden>Next</button>
+    </div>
+    <div class="toggle-ocr">
+      <button id="ocrToggle" type="button" aria-pressed="false">Show OCR text</button>
+    </div>
+  </main>
+
+  <footer>
+    OCR runs on GitHub Actions. Response cards are handled via GitHub Issues.
+  </footer>
+
+  <script src="data/cards.js"></script>
+  <script>
+    const REPO_OWNER = "mkkaufmann";
+    const REPO_NAME = "mkkaufmann.github.io";
+    const PAGE_SIZE = 10;
+
+    const cardsEl = document.getElementById("cards");
+    const emptyState = document.getElementById("emptyState");
+    const ocrToggle = document.getElementById("ocrToggle");
+    const OCR_STORAGE_KEY = "indexcards:show-ocr";
+    const paginationEl = document.getElementById("pagination");
+    const prevPageBtn = document.getElementById("prevPage");
+    const nextPageBtn = document.getElementById("nextPage");
+    const pageIndicator = document.getElementById("pageIndicator");
+
+    function formatTime(card) {
+      if (card.datetime) {
+        const date = new Date(card.datetime);
+        if (!Number.isNaN(date.getTime())) {
+          return new Intl.DateTimeFormat(undefined, {
+            hour: "numeric",
+            minute: "2-digit",
+            timeZoneName: "short"
+          }).format(date);
+        }
+      }
+      return card.time || "";
+    }
+
+    function formatDateTime(card) {
+      if (card.datetime) {
+        const date = new Date(card.datetime);
+        if (!Number.isNaN(date.getTime())) {
+          return new Intl.DateTimeFormat(undefined, {
+            year: "numeric",
+            month: "short",
+            day: "2-digit",
+            hour: "numeric",
+            minute: "2-digit",
+            timeZoneName: "short"
+          }).format(date);
+        }
+      }
+      return card.date || "";
+    }
+
+    function responseLink(card) {
+      const base = `https://github.com/${REPO_OWNER}/${REPO_NAME}/issues/new`;
+      const title = encodeURIComponent(`Response card: ${card.title}`);
+      const body = encodeURIComponent(`Response to card: ${card.slug}\n\nAttach a photo of your response card.`);
+      return `${base}?labels=response-card&template=response-card.yml&title=${title}&body=${body}`;
+    }
+
+    function renderCard(card) {
+      const article = document.createElement("article");
+      const img = document.createElement("img");
+      img.src = card.image;
+      img.alt = card.ocr || `Index card: ${card.title}`;
+      img.loading = "lazy";
+
+
+      const ocr = document.createElement("p");
+      ocr.className = "ocr";
+      ocr.textContent = card.ocr || "OCR pending.";
+
+      const ocrCard = document.createElement("div");
+      ocrCard.className = "ocr-card";
+      ocrCard.appendChild(ocr);
+
+      const link = document.createElement("a");
+      link.href = responseLink(card);
+      link.className = "reply-btn";
+      link.title = "Post a response card";
+      link.setAttribute("aria-label", "Post a response card");
+      link.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">
+  <path d="M9 14l-5-5 5-5"/>
+  <path d="M4 9h8a7 7 0 0 1 7 7v1"/>
+</svg>`;
+
+      const time = document.createElement("div");
+      time.className = "time";
+      time.textContent = formatTime(card);
+
+      const cardShell = document.createElement("div");
+      cardShell.className = "card-shell post-card";
+      if (card.pinned) {
+        cardShell.classList.add("pinned");
+      }
+      cardShell.append(img, ocrCard, link);
+
+      link.addEventListener("click", (event) => {
+        event.stopPropagation();
+      });
+
+      const postStack = document.createElement("div");
+      postStack.className = "post-stack collapsed";
+      postStack.setAttribute("role", "button");
+      postStack.setAttribute("tabindex", "0");
+      postStack.setAttribute("aria-expanded", "false");
+
+      if (Array.isArray(card.responses) && card.responses.length) {
+        const responses = document.createElement("div");
+        responses.className = "responses";
+        card.responses.forEach((response) => {
+          const responseShell = document.createElement("div");
+          responseShell.className = "card-shell response-card";
+
+          const responseImg = document.createElement("img");
+          responseImg.src = response.image;
+          responseImg.alt = response.ocr || `Response card: ${response.title}`;
+          responseImg.loading = "lazy";
+
+          const responseOcr = document.createElement("p");
+          responseOcr.className = "ocr";
+          responseOcr.textContent = response.ocr || "OCR pending.";
+
+          const responseOcrCard = document.createElement("div");
+          responseOcrCard.className = "ocr-card";
+          responseOcrCard.appendChild(responseOcr);
+
+          const responseMeta = document.createElement("div");
+          responseMeta.className = "response-meta";
+          const name = response.name ? response.name : "Anonymous";
+          responseMeta.textContent = `${name} · ${formatDateTime(response)}`;
+
+          responseShell.append(responseImg, responseOcrCard, responseMeta);
+          responses.appendChild(responseShell);
+        });
+
+        postStack.dataset.hasResponses = "true";
+        postStack.append(cardShell, time, responses);
+      } else {
+        postStack.dataset.hasResponses = "false";
+        postStack.append(cardShell, time);
+      }
+
+      postStack.addEventListener("click", () => {
+        const collapsed = postStack.classList.toggle("collapsed");
+        postStack.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      });
+      postStack.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          postStack.click();
+        }
+      });
+
+      article.append(postStack);
+      return article;
+    }
+
+    function renderFromData(data) {
+      const cards = Array.isArray(data.cards) ? data.cards : [];
+      if (!cards.length) {
+        emptyState.hidden = false;
+        return;
+      }
+
+      const pinned = cards.filter((card) => card.pinned);
+      const regular = cards.filter((card) => !card.pinned);
+      const totalPages = Math.max(1, Math.ceil(regular.length / PAGE_SIZE));
+      const url = new URL(window.location.href);
+      const pageParam = Number.parseInt(url.searchParams.get("page") || "1", 10);
+      const currentPage = Number.isNaN(pageParam) ? 1 : Math.min(Math.max(pageParam, 1), totalPages);
+      const start = (currentPage - 1) * PAGE_SIZE;
+      const pageCards = regular.slice(start, start + PAGE_SIZE);
+
+      if (pinned.length && currentPage === 1) {
+        pinned.sort((a, b) => {
+          const aOrder = Number.isFinite(a.pinnedOrder) ? a.pinnedOrder : Number.POSITIVE_INFINITY;
+          const bOrder = Number.isFinite(b.pinnedOrder) ? b.pinnedOrder : Number.POSITIVE_INFINITY;
+          if (aOrder !== bOrder) return aOrder - bOrder;
+          return 0;
+        });
+
+        const pinnedSection = document.createElement("section");
+        pinnedSection.className = "pinned-group";
+
+        const grid = document.createElement("div");
+        grid.className = "grid";
+        pinned.forEach((card) => grid.appendChild(renderCard(card)));
+
+        pinnedSection.append(grid);
+        cardsEl.appendChild(pinnedSection);
+      }
+
+      const groups = new Map();
+      pageCards.forEach((card) => {
+        const list = groups.get(card.date) || [];
+        list.push(card);
+        groups.set(card.date, list);
+      });
+
+      Array.from(groups.entries()).forEach(([date, items]) => {
+        const section = document.createElement("section");
+        section.className = "date-group";
+
+        const heading = document.createElement("h2");
+        heading.textContent = date;
+
+        const grid = document.createElement("div");
+        grid.className = "grid";
+        items.forEach((card) => grid.appendChild(renderCard(card)));
+
+        section.append(heading, grid);
+        cardsEl.appendChild(section);
+      });
+
+      if (totalPages > 1) {
+        paginationEl.hidden = false;
+        pageIndicator.textContent = `Page ${currentPage} of ${totalPages}`;
+        const hidePrev = currentPage <= 1;
+        const hideNext = currentPage >= totalPages;
+        prevPageBtn.disabled = hidePrev;
+        nextPageBtn.disabled = hideNext;
+        prevPageBtn.hidden = hidePrev;
+        nextPageBtn.hidden = hideNext;
+        prevPageBtn.onclick = () => {
+          url.searchParams.set("page", String(currentPage - 1));
+          window.location.href = url.toString();
+        };
+        nextPageBtn.onclick = () => {
+          url.searchParams.set("page", String(currentPage + 1));
+          window.location.href = url.toString();
+        };
+      } else {
+        paginationEl.hidden = true;
+      }
+    }
+
+    function applyOcrState(showing) {
+      document.body.classList.toggle("show-ocr", showing);
+      ocrToggle.textContent = showing ? "Show images" : "Show OCR text";
+      ocrToggle.setAttribute("aria-pressed", showing ? "true" : "false");
+    }
+
+    const storedOcr = localStorage.getItem(OCR_STORAGE_KEY);
+    if (storedOcr === "true") {
+      applyOcrState(true);
+    }
+
+    ocrToggle.addEventListener("click", () => {
+      const showing = !document.body.classList.contains("show-ocr");
+      localStorage.setItem(OCR_STORAGE_KEY, String(showing));
+      applyOcrState(showing);
+    });
+
+    if (window.CARDS_DATA) {
+      renderFromData(window.CARDS_DATA);
+    } else {
+      fetch("data/cards.json")
+        .then((res) => res.json())
+        .then((data) => renderFromData(data))
+        .catch(() => {
+          emptyState.hidden = false;
+          emptyState.textContent = "Unable to load cards.";
+        });
+    }
+  </script>
+</body>
+</html>

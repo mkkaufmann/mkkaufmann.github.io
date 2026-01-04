@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Upload Index Card</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f5f2;
+      --ink: #1d1d1f;
+      --muted: #5d5d5f;
+      --card: #ffffff;
+      --border: #dedad2;
+      --accent: #2f5d62;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Times New Roman", Georgia, serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+    main {
+      max-width: 760px;
+      margin: 30px auto;
+      padding: 0 20px 40px;
+    }
+    h1 {
+      margin-bottom: 10px;
+    }
+    p {
+      color: var(--muted);
+    }
+    form {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      display: grid;
+      gap: 14px;
+    }
+    label {
+      font-weight: 600;
+      display: block;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 8px 10px;
+      font-family: inherit;
+      font-size: 15px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .checkbox-row input {
+      width: auto;
+      margin: 0;
+    }
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .notice {
+      background: #fff8e6;
+      border: 1px solid #e4d4a4;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 14px;
+    }
+    .status {
+      font-size: 14px;
+      color: var(--muted);
+      white-space: pre-line;
+    }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Upload an Index Card</h1>
+    <p>Use this form to upload a rectified card image directly into the repo. OCR will run on GitHub Actions.</p>
+    <div class="notice">
+      This uses the GitHub API from your browser. Use a fine-grained personal access token with content write access to this repo.
+    </div>
+
+    <form id="uploadForm">
+      <div>
+        <label for="token">GitHub token</label>
+        <input id="token" name="token" type="password" autocomplete="off" required>
+      </div>
+      <div>
+        <label for="title">Card title</label>
+        <input id="title" name="title" type="text" required>
+      </div>
+      <div>
+        <label for="datetime">Date & time (local)</label>
+        <input id="datetime" name="datetime" type="datetime-local" required>
+      </div>
+      <div>
+        <label for="image">Card image</label>
+        <input id="image" name="image" type="file" accept="image/*" required>
+      </div>
+      <div>
+        <div class="checkbox-row">
+          <input id="pinned" name="pinned" type="checkbox">
+          <label for="pinned">Pin this card</label>
+        </div>
+      </div>
+      <div>
+        <label for="pinnedOrder">Pinned order (lower is higher priority)</label>
+        <input id="pinnedOrder" name="pinnedOrder" type="number" min="1" step="1" placeholder="1">
+      </div>
+      <button id="submitBtn" type="submit">Upload card</button>
+      <div id="status" class="status" role="status"></div>
+    </form>
+
+    <p><a href="index.html">Back to cards</a></p>
+  </main>
+
+  <script>
+    const REPO_OWNER = "mkkaufmann";
+    const REPO_NAME = "mkkaufmann.github.io";
+    const BRANCH = "main";
+
+    const form = document.getElementById("uploadForm");
+    const statusEl = document.getElementById("status");
+    const submitBtn = document.getElementById("submitBtn");
+    const datetimeInput = document.getElementById("datetime");
+
+    function pad(value) {
+      return String(value).padStart(2, "0");
+    }
+
+    function toLocalInputValue(date) {
+      const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+      return local.toISOString().slice(0, 16);
+    }
+
+    function toOffsetIso(value) {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return "";
+      const offset = -date.getTimezoneOffset();
+      const sign = offset >= 0 ? "+" : "-";
+      const hours = pad(Math.floor(Math.abs(offset) / 60));
+      const minutes = pad(Math.abs(offset) % 60);
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:00${sign}${hours}:${minutes}`;
+    }
+
+    const now = new Date();
+    datetimeInput.value = toLocalInputValue(now);
+
+    function slugify(value) {
+      return value
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+    }
+
+    function toBase64(buffer) {
+      let binary = "";
+      const bytes = new Uint8Array(buffer);
+      for (let i = 0; i < bytes.length; i += 1) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return btoa(binary);
+    }
+
+    async function putFile({ token, path, content, message }) {
+      const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`;
+      const res = await fetch(url, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Accept: "application/vnd.github+json"
+        },
+        body: JSON.stringify({
+          message,
+          content,
+          branch: BRANCH
+        })
+      });
+
+      if (!res.ok) {
+        const details = await res.json().catch(() => ({}));
+        throw new Error(details.message || "GitHub API error");
+      }
+
+      return res.json();
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      statusEl.textContent = "Uploading...";
+      submitBtn.disabled = true;
+
+      const token = form.token.value.trim();
+      const title = form.title.value.trim();
+      const imageFile = form.image.files[0];
+      const pinned = form.pinned.checked;
+      const pinnedOrder = form.pinnedOrder.value.trim();
+      const datetimeLocal = form.datetime.value;
+
+      if (!token || !title || !imageFile || !datetimeLocal) {
+        statusEl.textContent = "Missing required fields.";
+        submitBtn.disabled = false;
+        return;
+      }
+
+      const localDate = datetimeLocal.slice(0, 10);
+      const slug = `${localDate}-${slugify(title)}`;
+      const ext = imageFile.name.split(".").pop().toLowerCase();
+      const imagePath = `content/cards/${slug}/image.${ext}`;
+      const metaPath = `content/cards/${slug}/meta.json`;
+      const meta = {
+        title,
+        date: localDate,
+        datetime: toOffsetIso(datetimeLocal),
+        slug,
+        status: "pending_ocr",
+        pinned,
+        pinnedOrder: pinnedOrder ? Number(pinnedOrder) : null
+      };
+
+      try {
+        const imageBuffer = await imageFile.arrayBuffer();
+        const imageBase64 = toBase64(imageBuffer);
+        const metaBase64 = btoa(JSON.stringify(meta, null, 2));
+
+        await putFile({
+          token,
+          path: imagePath,
+          content: imageBase64,
+          message: `Add card image for ${slug}`
+        });
+
+        await putFile({
+          token,
+          path: metaPath,
+          content: metaBase64,
+          message: `Add card metadata for ${slug}`
+        });
+
+        statusEl.textContent = "Upload complete. OCR and publishing will run on GitHub Actions.";
+        form.reset();
+        const resetNow = new Date();
+        datetimeInput.value = toLocalInputValue(resetNow);
+      } catch (err) {
+        statusEl.textContent = `Upload failed: ${err.message}`;
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

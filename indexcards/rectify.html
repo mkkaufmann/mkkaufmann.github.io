@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Index Card Rectifier</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --panel: #161b22;
+      --accent: #58a6ff;
+      --text: #c9d1d9;
+      --muted: #8b949e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px;
+      background: radial-gradient(circle at 20% 20%, #111927, #0d1117 40%), var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      line-height: 1.5;
+    }
+    h1 { margin: 0 0 8px; font-size: 22px; }
+    p { margin: 0 0 14px; color: var(--muted); }
+    .card {
+      background: var(--panel);
+      border: 1px solid #21262d;
+      border-radius: 12px;
+      padding: 16px;
+      max-width: 960px;
+      margin: 0 auto;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+    }
+    .controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    input[type="file"] {
+      color: var(--text);
+    }
+    button {
+      background: var(--accent);
+      border: none;
+      color: #0d1117;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 120ms ease, box-shadow 120ms ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    button:active { transform: translateY(1px); }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .panel {
+      background: #0f1622;
+      border: 1px solid #1f2733;
+      border-radius: 10px;
+      padding: 12px;
+      min-height: 120px;
+    }
+    .panel h3 { margin: 0 0 10px; font-size: 16px; color: var(--accent); }
+    .panel img { display: block; border-radius: 6px; }
+    #resultPreview { max-width: 100%; height: auto; }
+    .preview-wrap { position: relative; display: inline-block; width: 100%; max-width: 100%; }
+    .preview-wrap img,
+    .preview-wrap canvas {
+      width: 100%;
+      height: auto;
+    }
+    #overlay { position: absolute; inset: 0; pointer-events: none; }
+    .hint { margin-top: 8px; color: var(--muted); font-size: 12px; }
+    .buttons { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .adjustments {
+      margin-top: 10px;
+      display: grid;
+      gap: 8px;
+    }
+    .adjustments label {
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .adjustments input[type="range"] {
+      width: 100%;
+    }
+    .icon-btn svg {
+      width: 16px;
+      height: 16px;
+      stroke: #0d1117;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    #quadInfo { font-family: monospace; }
+    #status { color: var(--muted); font-size: 14px; }
+    a.download {
+      display: inline-block;
+      margin-top: 8px;
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Index Card Rectifier</h1>
+    <p>Drop in a photo of an index card; the script finds the card outline and performs a perspective warp to give you a flat, rectangular image.</p>
+    <div class="controls">
+      <input type="file" id="fileInput" accept="image/*">
+      <button id="processBtn" disabled>Reset</button>
+      <span id="status">Waiting for image…</span>
+    </div>
+    <div id="quadInfo" class="hint" hidden></div>
+    <div class="gallery">
+      <div class="panel">
+        <h3>Original</h3>
+        <div class="preview-wrap" id="originalWrap">
+          <img id="originalPreview" alt="Original preview">
+          <canvas id="overlay" aria-hidden="true"></canvas>
+        </div>
+        <div class="hint" id="manualHint" hidden>Tap four corners (clockwise or counter‑clockwise) if auto-detect fails.</div>
+        <div class="buttons">
+          <button id="manualBtn" disabled hidden>Adjust corners</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Rectified</h3>
+        <div class="buttons">
+          <button id="rotateLeftBtn" class="icon-btn" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M7.5 8.25 4.5 5.25m0 0 3-3m-3 3h3.75A6.75 6.75 0 1 1 4.5 12"/>
+            </svg>
+            Rotate left
+          </button>
+          <button id="rotateRightBtn" class="icon-btn" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M16.5 8.25 19.5 5.25m0 0-3-3m3 3h-3.75A6.75 6.75 0 1 0 19.5 12"/>
+            </svg>
+            Rotate right
+          </button>
+        </div>
+        <div class="adjustments">
+          <label>
+            Brightness
+            <span id="brightnessValue">0</span>
+          </label>
+          <input id="brightnessInput" type="range" min="-100" max="100" value="0" step="1" disabled>
+          <label>
+            Contrast
+            <span id="contrastValue">0</span>
+          </label>
+          <input id="contrastInput" type="range" min="-100" max="100" value="0" step="1" disabled>
+        </div>
+        <img id="resultPreview" alt="Rectified preview">
+        <a id="downloadLink" class="download" download="index-card.png" hidden>Download PNG</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- OpenCV.js CDN; keep version pinned for reproducibility -->
+  <script async src="https://docs.opencv.org/4.9.0/opencv.js" onload="onOpenCvReady()" onerror="onOpenCvError()"></script>
+  <script>
+    const fileInput = document.getElementById("fileInput");
+    const processBtn = document.getElementById("processBtn");
+    const statusEl = document.getElementById("status");
+    const originalPreview = document.getElementById("originalPreview");
+    const originalWrap = document.getElementById("originalWrap");
+    const resultPreview = document.getElementById("resultPreview");
+    const downloadLink = document.getElementById("downloadLink");
+    const overlay = document.getElementById("overlay");
+    const manualBtn = document.getElementById("manualBtn"); // retained but hidden
+    const manualHint = document.getElementById("manualHint");
+    const rotateLeftBtn = document.getElementById("rotateLeftBtn");
+    const rotateRightBtn = document.getElementById("rotateRightBtn");
+    const quadInfo = document.getElementById("quadInfo");
+    const brightnessInput = document.getElementById("brightnessInput");
+    const brightnessValue = document.getElementById("brightnessValue");
+    const contrastInput = document.getElementById("contrastInput");
+    const contrastValue = document.getElementById("contrastValue");
+    const CARD_RATIO = 5 / 3; // width/height for a 3x5 card
+    let imageBitmap = null;
+    let clickPoints = [];
+    let displaySize = { width: 0, height: 0 };
+    let lastQuad = null;
+    let manualMode = false;
+    let dragIndex = -1;
+    let manualTimer = null;
+    let baseCanvas = null;
+    let resultUrl = "";
+
+    function onOpenCvReady() {
+      statusEl.textContent = "OpenCV ready. Load an image to begin.";
+      processBtn.disabled = !imageBitmap;
+    }
+
+    function onOpenCvError() {
+      statusEl.textContent = "Failed to load OpenCV.js. Check your connection.";
+      processBtn.disabled = true;
+    }
+
+    fileInput.addEventListener("change", async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const imgURL = URL.createObjectURL(file);
+      originalPreview.src = imgURL;
+      imageBitmap = await createImageBitmap(file);
+      const maxSide = 1500;
+      const scale = Math.min(1, maxSide / Math.max(imageBitmap.width, imageBitmap.height));
+      displaySize = {
+        width: Math.round(imageBitmap.width * scale),
+        height: Math.round(imageBitmap.height * scale)
+      };
+      originalPreview.width = displaySize.width;
+      originalPreview.height = displaySize.height;
+      originalWrap.style.maxWidth = displaySize.width + "px";
+      overlay.width = displaySize.width;
+      overlay.height = displaySize.height;
+      overlay.style.width = "100%";
+      overlay.style.height = "auto";
+      overlay.style.pointerEvents = "none";
+      clickPoints = [];
+      dragIndex = -1;
+      manualBtn.hidden = true;
+      manualBtn.disabled = true;
+      manualHint.hidden = false;
+      manualHint.textContent = "Auto-rectifying… drag corners to tweak after it finishes.";
+      statusEl.textContent = "Image loaded. Auto-rectifying…";
+      resetAdjustments();
+      processBtn.disabled = typeof cv === "undefined";
+      if (typeof cv !== "undefined") {
+        runRectify();
+      }
+    });
+
+    processBtn.addEventListener("click", () => {
+      if (!imageBitmap || typeof cv === "undefined") return;
+      clickPoints = [];
+      manualMode = false;
+      overlay.style.pointerEvents = "none";
+      statusEl.textContent = "Resetting…";
+      runRectify();
+    });
+
+    rotateLeftBtn.addEventListener("click", () => rotateResult(-90));
+    rotateRightBtn.addEventListener("click", () => rotateResult(90));
+
+    overlay.addEventListener("pointerdown", (e) => {
+      if (!manualMode) return;
+      const { x, y } = overlayPoint(e);
+      if (!clickPoints.length && lastQuad) {
+        clickPoints = lastQuad.map(p => ({ ...p }));
+      }
+      const handle = nearestHandle(x, y, clickPoints.length ? clickPoints : lastQuad, 18);
+      if (handle.index !== -1) {
+        dragIndex = handle.index;
+      } else if (clickPoints.length < 4) {
+        clickPoints.push({ x, y });
+        drawQuad(clickPoints);
+        if (clickPoints.length === 4) {
+          scheduleManualRectify();
+        }
+      }
+    });
+
+    overlay.addEventListener("pointermove", (e) => {
+      if (!manualMode || dragIndex === -1) return;
+      const { x, y } = overlayPoint(e);
+      const points = clickPoints.length ? clickPoints : lastQuad || [];
+      if (!points[dragIndex]) return;
+      points[dragIndex] = clampPoint({ x, y }, overlay.width, overlay.height);
+      if (points === lastQuad) {
+        lastQuad = points.map(p => ({ ...p }));
+        drawQuad(lastQuad);
+      } else {
+        clickPoints = points;
+        drawQuad(clickPoints);
+      }
+    });
+
+    overlay.addEventListener("pointerup", () => {
+      dragIndex = -1;
+      scheduleManualRectify();
+    });
+
+    function scheduleManualRectify() {
+      const pts = clickPoints && clickPoints.length === 4 ? clickPoints : lastQuad;
+      if (!pts || pts.length !== 4) return;
+      if (manualTimer) clearTimeout(manualTimer);
+      manualTimer = setTimeout(() => {
+        runRectify(pts.map(p => ({ ...p })), { keepManual: true, preservePoints: clickPoints && clickPoints.length === 4 });
+      }, 120);
+    }
+
+    async function runRectify(manualPoints, opts = {}) {
+      const keepManual = !!opts.keepManual;
+      const preservePoints = !!opts.preservePoints;
+      if (!imageBitmap || typeof cv === "undefined") return;
+      statusEl.textContent = manualPoints ? (keepManual ? "Updating with your corners…" : "Rectifying with your corners…") : "Processing…";
+      try {
+        const { canvas, quad } = await rectifyImage(imageBitmap, manualPoints);
+        baseCanvas = canvas;
+        await applyAdjustments();
+        rotateLeftBtn.hidden = false;
+        rotateRightBtn.hidden = false;
+        lastQuad = quad;
+        window.__lastQuad = quad;
+        drawQuad(quad);
+        updateQuadInfo(quad);
+        statusEl.textContent = "Done. Drag corners to refine if needed.";
+        manualMode = true;
+        overlay.style.pointerEvents = "auto";
+        manualHint.hidden = false;
+        manualHint.textContent = "Drag corners to refine; updates after release.";
+        if (!preservePoints) {
+          clickPoints = [];
+        }
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = "Could not detect the card automatically.";
+        manualHint.hidden = false;
+        manualBtn.disabled = true;
+        manualBtn.hidden = true;
+      }
+    }
+
+    async function rectifyImage(bitmap, manualPoints) {
+      const maxSide = 1500;
+      const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+      const displayW = Math.round(bitmap.width * scale);
+      const displayH = Math.round(bitmap.height * scale);
+
+      // Draw bitmap onto a canvas to feed into OpenCV
+      const canvas = makeCanvas(displayW, displayH);
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(bitmap, 0, 0, displayW, displayH);
+      const imageData = ctx.getImageData(0, 0, displayW, displayH);
+
+      const src = cv.matFromImageData(imageData);
+      const quad = manualPoints ? matFromPoints(manualPoints) : detectCard(src);
+      if (!quad) {
+        src.delete();
+        throw new Error("No card-like contour found");
+      }
+
+      const ordered = orderCorners(quad);
+      quad.delete();
+      const { width, height } = measuredSize(ordered);
+      const dstCoords = cv.matFromArray(4, 1, cv.CV_32FC2, [
+        0, 0,
+        width - 1, 0,
+        width - 1, height - 1,
+        0, height - 1
+      ]);
+      const M = cv.getPerspectiveTransform(ordered, dstCoords);
+      const dst = new cv.Mat();
+      cv.warpPerspective(src, dst, M, new cv.Size(width, height), cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar());
+
+      // Encode to PNG
+      const outCanvas = makeDomCanvas(width, height);
+      cv.imshow(outCanvas, dst);
+      const rotatedCanvas = rotateToLandscape(outCanvas);
+      const finalCanvas = enforceCardRatio(rotatedCanvas);
+      const quadArr = orderedToArray(ordered);
+
+      // Clean up
+      src.delete(); ordered.delete(); dstCoords.delete(); M.delete(); dst.delete();
+
+      return { canvas: finalCanvas, quad: quadArr, displaySize: { width: displayW, height: displayH } };
+    }
+
+    function makeCanvas(width, height) {
+      if (typeof OffscreenCanvas !== "undefined") {
+        return new OffscreenCanvas(width, height);
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      return canvas;
+    }
+
+    function makeDomCanvas(width, height) {
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      return canvas;
+    }
+
+    async function canvasToBlob(canvas) {
+      if (canvas.convertToBlob) return canvas.convertToBlob({ type: "image/png" });
+      return new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+    }
+
+    function matFromPoints(points) {
+      return cv.matFromArray(4, 1, cv.CV_32FC2, points.flatMap(p => [p.x, p.y]));
+    }
+
+    function drawQuad(points) {
+      const ctx = overlay.getContext("2d");
+      ctx.clearRect(0, 0, overlay.width, overlay.height);
+      if (!points || points.length < 2) return;
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "rgba(88, 166, 255, 0.9)";
+      ctx.fillStyle = "rgba(88, 166, 255, 0.2)";
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y);
+      }
+      if (points.length === 4) {
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.stroke();
+      ctx.fillStyle = "rgba(88, 166, 255, 1)";
+      for (const p of points) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function overlayPoint(e) {
+      const rect = overlay.getBoundingClientRect();
+      const scaleX = overlay.width / rect.width;
+      const scaleY = overlay.height / rect.height;
+      return {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY
+      };
+    }
+
+    function nearestHandle(x, y, points, radius) {
+      if (!points || !points.length) return { index: -1, dist: Infinity };
+      let best = { index: -1, dist: Infinity };
+      for (let i = 0; i < points.length; i++) {
+        const d = Math.hypot(points[i].x - x, points[i].y - y);
+        if (d < best.dist) {
+          best = { index: i, dist: d };
+        }
+      }
+      return best.dist <= radius ? best : { index: -1, dist: best.dist };
+    }
+
+    function clampPoint(p, maxW, maxH) {
+      return {
+        x: Math.max(0, Math.min(maxW, p.x)),
+        y: Math.max(0, Math.min(maxH, p.y))
+      };
+    }
+
+    function rotateToLandscape(canvas) {
+      if (canvas.height <= canvas.width) return canvas;
+      const rotated = document.createElement("canvas");
+      rotated.width = canvas.height;
+      rotated.height = canvas.width;
+      const ctx = rotated.getContext("2d");
+      ctx.translate(rotated.width / 2, rotated.height / 2);
+      ctx.rotate(Math.PI / 2);
+      ctx.drawImage(canvas, -canvas.width / 2, -canvas.height / 2);
+      return rotated;
+    }
+
+    async function rotateResult(angleDeg) {
+      if (!baseCanvas) return;
+      const bitmap = await createImageBitmap(await canvasToBlob(baseCanvas));
+      const radians = angleDeg * Math.PI / 180;
+      const sin = Math.abs(Math.sin(radians));
+      const cos = Math.abs(Math.cos(radians));
+      const newW = Math.round(bitmap.width * cos + bitmap.height * sin);
+      const newH = Math.round(bitmap.width * sin + bitmap.height * cos);
+      const canvas = document.createElement("canvas");
+      canvas.width = newW;
+      canvas.height = newH;
+      const ctx = canvas.getContext("2d");
+      ctx.translate(newW / 2, newH / 2);
+      ctx.rotate(radians);
+      ctx.drawImage(bitmap, -bitmap.width / 2, -bitmap.height / 2);
+      const finalCanvas = enforceCardRatio(canvas);
+      baseCanvas = finalCanvas;
+      await applyAdjustments();
+      updateQuadInfo(lastQuad);
+    }
+
+    function resetAdjustments() {
+      brightnessInput.value = "0";
+      contrastInput.value = "0";
+      brightnessValue.textContent = "0";
+      contrastValue.textContent = "0";
+      brightnessInput.disabled = true;
+      contrastInput.disabled = true;
+    }
+
+    function updateAdjustmentLabels() {
+      brightnessValue.textContent = brightnessInput.value;
+      contrastValue.textContent = contrastInput.value;
+    }
+
+    function adjustCanvas(canvas, brightness, contrast) {
+      const out = makeDomCanvas(canvas.width, canvas.height);
+      const ctx = out.getContext("2d");
+      ctx.drawImage(canvas, 0, 0);
+      const imgData = ctx.getImageData(0, 0, out.width, out.height);
+      const data = imgData.data;
+      const b = brightness * 2.55;
+      const c = contrast * 2.55;
+      const factor = (259 * (c + 255)) / (255 * (259 - c));
+      for (let i = 0; i < data.length; i += 4) {
+        data[i] = clampChannel(factor * (data[i] - 128) + 128 + b);
+        data[i + 1] = clampChannel(factor * (data[i + 1] - 128) + 128 + b);
+        data[i + 2] = clampChannel(factor * (data[i + 2] - 128) + 128 + b);
+      }
+      ctx.putImageData(imgData, 0, 0);
+      return out;
+    }
+
+    function clampChannel(value) {
+      return Math.max(0, Math.min(255, Math.round(value)));
+    }
+
+    async function applyAdjustments() {
+      if (!baseCanvas) return;
+      const brightness = Number(brightnessInput.value);
+      const contrast = Number(contrastInput.value);
+      updateAdjustmentLabels();
+      const adjusted = adjustCanvas(baseCanvas, brightness, contrast);
+      const blob = await canvasToBlob(adjusted);
+      const url = URL.createObjectURL(blob);
+      if (resultUrl) URL.revokeObjectURL(resultUrl);
+      resultUrl = url;
+      resultPreview.src = url;
+      downloadLink.href = url;
+      downloadLink.hidden = false;
+      brightnessInput.disabled = false;
+      contrastInput.disabled = false;
+    }
+
+    brightnessInput.addEventListener("input", () => {
+      applyAdjustments();
+    });
+
+    contrastInput.addEventListener("input", () => {
+      applyAdjustments();
+    });
+
+    function detectCard(src) {
+      const imgW = src.cols;
+      const imgH = src.rows;
+      // Build a set of candidates from multiple preprocessing passes, then score for area and aspect ratio.
+      const candidates = [];
+
+      const pushCandidate = (quad, label) => {
+        const ordered = orderCorners(quad);
+        const { width, height } = measuredSize(ordered);
+        const area = cv.contourArea(ordered);
+        if (!isValidQuad(ordered, imgW, imgH)) {
+          ordered.delete();
+          return;
+        }
+        if (brightBox) {
+          const ptsArr = orderedToArray(ordered);
+          const cx = ptsArr.reduce((s, p) => s + p.x, 0) / 4;
+          const cy = ptsArr.reduce((s, p) => s + p.y, 0) / 4;
+          if (!pointInBox({ x: cx, y: cy }, brightBox, 20)) {
+            ordered.delete();
+            return;
+          }
+        }
+        const ratio = width >= height ? width / height : height / width;
+        const targetRatio = CARD_RATIO;
+        const aspectScore = Math.exp(-Math.abs(Math.log(ratio / targetRatio)));
+        const areaScore = area;
+        const bbox = cv.boundingRect(ordered);
+        const rectFill = area / (bbox.width * bbox.height);
+        if (rectFill < 0.4) {
+          ordered.delete();
+          return; // likely includes desk/background
+        }
+        let score = areaScore * aspectScore;
+        const marginX = imgW * 0.02;
+        const marginY = imgH * 0.02;
+        const touchesBorder = orderedToArray(ordered).some(
+          (p) => p.x < marginX || p.x > imgW - marginX || p.y < marginY || p.y > imgH - marginY
+        );
+        if (touchesBorder) score *= 0.2; // penalize border-hugging quads
+        candidates.push({ quad: ordered, score, area, label });
+        if (quad !== ordered) quad.delete();
+      };
+
+      const gray = new cv.Mat();
+      cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+
+      const eq = new cv.Mat();
+      cv.equalizeHist(gray, eq);
+
+      const blur = new cv.Mat();
+      cv.GaussianBlur(eq, blur, new cv.Size(5, 5), 0);
+
+      const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
+
+      const minArea = src.rows * src.cols * 0.002;
+      const maxArea = src.rows * src.cols * 0.88;
+      const brightBox = findBrightBox(eq, minArea);
+      const rotatedQuad = largestRotatedQuad(eq, minArea, maxArea);
+
+      // Pass 1: Edge-based
+      const edges = new cv.Mat();
+      cv.Canny(blur, edges, 30, 120);
+      cv.dilate(edges, edges, kernel);
+      collectQuads(edges, minArea, maxArea, pushCandidate);
+
+      // Pass 2: Adaptive threshold (inverted)
+      const adaptive = new cv.Mat();
+      cv.adaptiveThreshold(blur, adaptive, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 15, 5);
+      cv.bitwise_not(adaptive, adaptive);
+      cv.morphologyEx(adaptive, adaptive, cv.MORPH_CLOSE, kernel);
+      collectQuads(adaptive, minArea, maxArea, pushCandidate);
+
+      // Pass 3: Otsu (normal and inverted)
+      const otsu = new cv.Mat();
+      cv.threshold(blur, otsu, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU);
+      cv.morphologyEx(otsu, otsu, cv.MORPH_CLOSE, kernel);
+      collectQuads(otsu, minArea, maxArea, pushCandidate);
+
+      const otsuInv = new cv.Mat();
+      cv.bitwise_not(otsu, otsuInv);
+      cv.morphologyEx(otsuInv, otsuInv, cv.MORPH_CLOSE, kernel);
+      collectQuads(otsuInv, minArea, maxArea, pushCandidate);
+
+      // Brightness-based bounding box (helps when desk is darker)
+      const bright = new cv.Mat();
+      cv.threshold(eq, bright, 200, 255, cv.THRESH_BINARY);
+      const brightKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(7, 7));
+      cv.morphologyEx(bright, bright, cv.MORPH_CLOSE, brightKernel);
+      const brightRect = largestMinAreaRect(bright, minArea, maxArea);
+      bright.delete(); brightKernel.delete();
+      if (brightRect) pushCandidate(brightRect, "brightRect");
+
+      // Fallback: oriented box from largest contour on Otsu inverted (good for light card on darker desk)
+      if (!candidates.length) {
+        const rectQuad = largestMinAreaRect(otsuInv, minArea, maxArea);
+        if (rectQuad) pushCandidate(rectQuad, "minAreaRect");
+      }
+
+      // Cleanup temporaries
+      gray.delete(); eq.delete(); blur.delete(); kernel.delete(); edges.delete(); adaptive.delete(); otsu.delete(); otsuInv.delete();
+
+      // Use bright box and rotated rect as additional candidates
+      if (brightBox) {
+        const inset = insetBoxAdaptive(brightBox, imgW, imgH);
+        const boxQuad = ensureFloatQuad(boxToQuad(inset));
+        const { width, height } = measuredSize(boxQuad);
+        const ratio = width >= height ? width / height : height / width;
+        const targetRatio = CARD_RATIO;
+        const aspectScore = Math.exp(-Math.abs(Math.log(ratio / targetRatio)));
+        const areaScore = inset.width * inset.height;
+        candidates.push({ quad: boxQuad, score: areaScore * aspectScore * 2, area: areaScore, label: "brightBox" });
+      }
+      if (rotatedQuad) {
+        const { width, height } = measuredSize(rotatedQuad);
+        const ratio = width >= height ? width / height : height / width;
+        const targetRatio = CARD_RATIO;
+        const aspectScore = Math.exp(-Math.abs(Math.log(ratio / targetRatio)));
+        const areaScore = width * height;
+        candidates.push({ quad: rotatedQuad, score: areaScore * aspectScore * 5, area: areaScore, label: "rotatedRect" });
+      }
+      if (!candidates.length) return null;
+      candidates.sort((a, b) => b.score - a.score);
+      // Keep only the best-scoring quad; delete the rest.
+      for (let i = 1; i < candidates.length; i++) {
+        candidates[i].quad.delete();
+      }
+      return candidates[0].quad;
+    }
+
+    function findBrightBox(eq, minArea) {
+      const bright = new cv.Mat();
+      cv.threshold(eq, bright, 190, 255, cv.THRESH_BINARY);
+      const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(7, 7));
+      cv.morphologyEx(bright, bright, cv.MORPH_CLOSE, kernel);
+      const contours = new cv.MatVector();
+      const hierarchy = new cv.Mat();
+      cv.findContours(bright, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+      let best = null;
+      for (let i = 0; i < contours.size(); i++) {
+        const cnt = contours.get(i);
+        const area = cv.contourArea(cnt);
+        if (area >= minArea) {
+          if (!best || area > best.area) {
+            if (best) best.cnt.delete();
+            best = { cnt, area };
+          } else {
+            cnt.delete();
+          }
+        } else {
+          cnt.delete();
+        }
+      }
+      let box = null;
+      if (best) {
+        const rect = cv.boundingRect(best.cnt);
+        box = rect;
+        best.cnt.delete();
+      }
+      contours.delete(); hierarchy.delete(); bright.delete(); kernel.delete();
+      return box;
+    }
+
+    function largestRotatedQuad(eq, minArea, maxArea) {
+      const gray = eq;
+      const binary = new cv.Mat();
+      cv.threshold(gray, binary, 190, 255, cv.THRESH_BINARY);
+      const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
+      cv.morphologyEx(binary, binary, cv.MORPH_CLOSE, kernel);
+      const contours = new cv.MatVector();
+      const hierarchy = new cv.Mat();
+      cv.findContours(binary, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+      let best = null;
+      for (let i = 0; i < contours.size(); i++) {
+        const cnt = contours.get(i);
+        const area = cv.contourArea(cnt);
+        if (area >= minArea && area <= maxArea) {
+          if (!best || area > best.area) {
+            if (best) best.cnt.delete();
+            best = { cnt, area };
+          } else {
+            cnt.delete();
+          }
+        } else {
+          cnt.delete();
+        }
+      }
+      let quad = null;
+      if (best) {
+        const rect = cv.minAreaRect(best.cnt);
+        const box = cv.RotatedRect.points(rect);
+        quad = cv.matFromArray(4, 1, cv.CV_32FC2, box.flatMap(p => [p.x, p.y]));
+        best.cnt.delete();
+      }
+      contours.delete(); hierarchy.delete(); binary.delete(); kernel.delete();
+      return quad;
+    }
+
+    function findLineQuad(eq, imgW, imgH) {
+      const edges = new cv.Mat();
+      cv.Canny(eq, edges, 50, 150, 3, true);
+      const lines = new cv.Mat();
+      cv.HoughLinesP(edges, lines, 1, Math.PI / 180, 80, 100, 20);
+      edges.delete();
+      if (lines.rows < 4) {
+        lines.delete();
+        return null;
+      }
+      const horizontals = [];
+      const verticals = [];
+      for (let i = 0; i < lines.rows; i++) {
+        const x1 = lines.intPtr(i, 0)[0];
+        const y1 = lines.intPtr(i, 0)[1];
+        const x2 = lines.intPtr(i, 0)[2];
+        const y2 = lines.intPtr(i, 0)[3];
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+        const absAngle = Math.abs(angle);
+        if (absAngle < 0.25 || Math.abs(absAngle - Math.PI) < 0.25) {
+          horizontals.push({ p1: { x: x1, y: y1 }, p2: { x: x2, y: y2 } });
+        } else if (Math.abs(absAngle - Math.PI / 2) < 0.25) {
+          verticals.push({ p1: { x: x1, y: y1 }, p2: { x: x2, y: y2 } });
+        }
+      }
+      lines.delete();
+      if (!horizontals.length || !verticals.length) return null;
+      const top = horizontals.reduce((best, l) => (Math.min(l.p1.y, l.p2.y) < Math.min(best.p1.y, best.p2.y) ? l : best), horizontals[0]);
+      const bottom = horizontals.reduce((best, l) => (Math.max(l.p1.y, l.p2.y) > Math.max(best.p1.y, best.p2.y) ? l : best), horizontals[0]);
+      const left = verticals.reduce((best, l) => (Math.min(l.p1.x, l.p2.x) < Math.min(best.p1.x, best.p2.x) ? l : best), verticals[0]);
+      const right = verticals.reduce((best, l) => (Math.max(l.p1.x, l.p2.x) > Math.max(best.p1.x, best.p2.x) ? l : best), verticals[0]);
+
+      const tl = intersect(top, left);
+      const tr = intersect(top, right);
+      const br = intersect(bottom, right);
+      const bl = intersect(bottom, left);
+      if (!tl || !tr || !br || !bl) return null;
+      const quad = [tl, tr, br, bl].map((p) => ({
+        x: Math.min(Math.max(0, p.x), imgW - 1),
+        y: Math.min(Math.max(0, p.y), imgH - 1)
+      }));
+      return ensureFloatQuad(boxToQuad({ x: quad[0].x, y: quad[0].y, width: quad[2].x - quad[0].x, height: quad[2].y - quad[0].y }));
+    }
+
+    function intersect(l1, l2) {
+      const x1 = l1.p1.x, y1 = l1.p1.y, x2 = l1.p2.x, y2 = l1.p2.y;
+      const x3 = l2.p1.x, y3 = l2.p1.y, x4 = l2.p2.x, y4 = l2.p2.y;
+      const denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+      if (Math.abs(denom) < 1e-6) return null;
+      const px = ((x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)) / denom;
+      const py = ((x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)) / denom;
+      return { x: px, y: py };
+    }
+
+    function findLineQuad(eq, minArea, maxArea) {
+      const edges = new cv.Mat();
+      cv.Canny(eq, edges, 40, 120, 3, true);
+      const lines = new cv.Mat();
+      cv.HoughLinesP(edges, lines, 1, Math.PI / 180, 80, 80, 10);
+      edges.delete();
+      if (lines.rows < 4) {
+        lines.delete();
+        return null;
+      }
+      const pts = [];
+      for (let i = 0; i < lines.rows; i++) {
+        const x1 = lines.intPtr(i, 0)[0];
+        const y1 = lines.intPtr(i, 0)[1];
+        const x2 = lines.intPtr(i, 0)[2];
+        const y2 = lines.intPtr(i, 0)[3];
+        pts.push({ x: x1, y: y1 }, { x: x2, y: y2 });
+      }
+      lines.delete();
+      // Compute axis-aligned bbox of detected lines
+      const minX = pts.reduce((m, p) => Math.min(m, p.x), Infinity);
+      const maxX = pts.reduce((m, p) => Math.max(m, p.x), -Infinity);
+      const minY = pts.reduce((m, p) => Math.min(m, p.y), Infinity);
+      const maxY = pts.reduce((m, p) => Math.max(m, p.y), -Infinity);
+      const boxArea = (maxX - minX) * (maxY - minY);
+      if (boxArea < minArea || boxArea > maxArea) return null;
+      return ensureFloatQuad(boxToQuad({ x: minX, y: minY, width: maxX - minX, height: maxY - minY }));
+    }
+
+
+    function collectQuads(binary, minArea, maxArea, pushCandidate) {
+      const contours = new cv.MatVector();
+      const hierarchy = new cv.Mat();
+      cv.findContours(binary, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+      for (let i = 0; i < contours.size(); i++) {
+        const cnt = contours.get(i);
+        const peri = cv.arcLength(cnt, true);
+        const approx = new cv.Mat();
+        cv.approxPolyDP(cnt, approx, 0.02 * peri, true);
+        const area = cv.contourArea(approx);
+        if (area >= minArea && area <= maxArea) {
+          if (approx.rows === 4) {
+            pushCandidate(ensureFloatQuad(approx), "quad");
+          } else if (approx.rows > 4) {
+            const rect = cv.minAreaRect(cnt);
+            const box = cv.RotatedRect.points(rect);
+            const quad = cv.matFromArray(4, 1, cv.CV_32FC2, box.flatMap(p => [p.x, p.y]));
+            pushCandidate(quad, "rect");
+            approx.delete();
+          } else {
+            approx.delete();
+          }
+        } else {
+          approx.delete();
+        }
+        cnt.delete();
+      }
+      contours.delete(); hierarchy.delete();
+    }
+
+    function largestMinAreaRect(binary, minArea, maxArea) {
+      const contours = new cv.MatVector();
+      const hierarchy = new cv.Mat();
+      cv.findContours(binary, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+      let best = null;
+      for (let i = 0; i < contours.size(); i++) {
+        const cnt = contours.get(i);
+        const area = cv.contourArea(cnt);
+        if (area >= minArea && area <= maxArea) {
+          if (!best || area > best.area) {
+            if (best) best.cnt.delete();
+            best = { cnt, area };
+          } else {
+            cnt.delete();
+          }
+        } else {
+          cnt.delete();
+        }
+      }
+      let quad = null;
+      if (best) {
+        const rect = cv.minAreaRect(best.cnt);
+        const box = cv.RotatedRect.points(rect);
+        quad = cv.matFromArray(4, 1, cv.CV_32FC2, box.flatMap(p => [p.x, p.y]));
+        best.cnt.delete();
+      }
+      contours.delete(); hierarchy.delete();
+      return quad;
+    }
+
+    function isValidQuad(quad, imgW, imgH) {
+      const pts = [];
+      for (let i = 0; i < 4; i++) {
+        pts.push({ x: quad.floatPtr(i, 0)[0], y: quad.floatPtr(i, 0)[1] });
+      }
+      const area = cv.contourArea(quad);
+      const imgArea = imgW * imgH;
+      if (area < imgArea * 0.002 || area > imgArea * 0.88) return false;
+      const { width, height } = measuredSize(quad);
+      if (height === 0) return false;
+      const ratio = width / height;
+      if (ratio < 0.6 || ratio > 2.0) return false;
+      return true;
+    }
+
+    function fullFrameQuad(src) {
+      return cv.matFromArray(4, 1, cv.CV_32FC2, [
+        0, 0,
+        src.cols - 1, 0,
+        src.cols - 1, src.rows - 1,
+        0, src.rows - 1
+      ]);
+    }
+
+    function ensureFloatQuad(mat) {
+      if (mat.type() === cv.CV_32FC2) return mat;
+      const out = new cv.Mat();
+      mat.convertTo(out, cv.CV_32FC2);
+      return out;
+    }
+
+    function pointInBox(p, box, pad = 0) {
+      const x0 = box.x + pad;
+      const y0 = box.y + pad;
+      const x1 = box.x + box.width - pad;
+      const y1 = box.y + box.height - pad;
+      return p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1;
+    }
+
+    function boxToQuad(box) {
+      return cv.matFromArray(4, 1, cv.CV_32FC2, [
+        box.x, box.y,
+        box.x + box.width, box.y,
+        box.x + box.width, box.y + box.height,
+        box.x, box.y + box.height
+      ]);
+    }
+
+    function insetBoxAdaptive(box, maxW, maxH) {
+      const padLeft = box.width * 0.03;
+      const padRight = box.width * 0.014;
+      const padTop = box.height * 0.08;
+      const padBottom = box.height * 0.02;
+      const x0 = Math.max(0, Math.round(box.x + padLeft));
+      const y0 = Math.max(0, Math.round(box.y + padTop));
+      const x1 = Math.min(maxW - 1, Math.round(box.x + box.width - padRight));
+      const y1 = Math.min(maxH - 1, Math.round(box.y + box.height - padBottom));
+      return { x: x0, y: y0, width: Math.max(1, x1 - x0), height: Math.max(1, y1 - y0) };
+    }
+
+    function updateQuadInfo(quad) {
+      if (!quad || quad.length !== 4) {
+        quadInfo.hidden = true;
+        return;
+      }
+      const fmt = (p) => `${Math.round(p.x)},${Math.round(p.y)}`;
+      quadInfo.textContent = `Quad TL/TR/BR/BL: (${fmt(quad[0])})  (${fmt(quad[1])})  (${fmt(quad[2])})  (${fmt(quad[3])})`;
+      quadInfo.hidden = false;
+    }
+
+    function orderCorners(pointsMat) {
+      const pts = [];
+      for (let i = 0; i < 4; i++) {
+        const x = pointsMat.floatPtr(i, 0)[0];
+        const y = pointsMat.floatPtr(i, 0)[1];
+        pts.push({ x, y });
+      }
+      const sumSort = [...pts].sort((a, b) => a.y + a.x - (b.y + b.x));
+      const diffSort = [...pts].sort((a, b) => a.y - a.x - (b.y - b.x));
+      const ordered = [
+        sumSort[0],          // top-left
+        diffSort[0],         // top-right
+        sumSort[3],          // bottom-right
+        diffSort[3]          // bottom-left
+      ];
+      return cv.matFromArray(4, 1, cv.CV_32FC2, ordered.flatMap(p => [p.x, p.y]));
+    }
+
+    function orderedToArray(mat) {
+      const arr = [];
+      for (let i = 0; i < 4; i++) {
+        arr.push({ x: mat.floatPtr(i, 0)[0], y: mat.floatPtr(i, 0)[1] });
+      }
+      return arr;
+    }
+
+    function measuredSize(orderedMat) {
+      const pts = [];
+      for (let i = 0; i < 4; i++) {
+        const x = orderedMat.floatPtr(i, 0)[0];
+        const y = orderedMat.floatPtr(i, 0)[1];
+        pts.push({ x, y });
+      }
+      const dist = (p1, p2) => Math.hypot(p1.x - p2.x, p1.y - p2.y);
+      const width = Math.max(dist(pts[0], pts[1]), dist(pts[2], pts[3]));
+      const height = Math.max(dist(pts[1], pts[2]), dist(pts[3], pts[0]));
+      return { width: Math.max(1, Math.round(width)), height: Math.max(1, Math.round(height)) };
+    }
+
+    function enforceCardRatio(canvas) {
+      const area = Math.max(1, canvas.width * canvas.height);
+      const targetWidth = Math.max(1, Math.round(Math.sqrt(area * CARD_RATIO)));
+      const targetHeight = Math.max(1, Math.round(targetWidth / CARD_RATIO));
+      if (targetWidth === canvas.width && targetHeight === canvas.height) return canvas;
+      const stretched = document.createElement("canvas");
+      stretched.width = targetWidth;
+      stretched.height = targetHeight;
+      const ctx = stretched.getContext("2d");
+      ctx.drawImage(canvas, 0, 0, targetWidth, targetHeight);
+      return stretched;
+    }
+
+  </script>
+</body>
+</html>
